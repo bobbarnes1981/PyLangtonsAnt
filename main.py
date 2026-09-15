@@ -1,13 +1,20 @@
+"""Langton's Ant in Python"""
 import pygame
 
 WIDTH = 800
 HEIGHT = 600
 
-CELL_WIDTH = 10
-CELL_HEIGHT = 10
+CELL_SIZE = 10
+CELL_WIDTH = CELL_SIZE
+CELL_HEIGHT = CELL_SIZE
 
 GRID_WIDTH = WIDTH//CELL_WIDTH
 GRID_HEIGHT = HEIGHT//CELL_HEIGHT
+
+CELL_COLOURS = [
+    (0xff, 0x00, 0x00),
+    (0xff, 0xff, 0xff)
+]
 
 FACE = [
     "N",
@@ -17,11 +24,14 @@ FACE = [
 ]
 
 class Cell:
-    def __init__(self, state:int):
+    """A cell on the toroidal grid"""
+    def __init__(self, state: int):
         self.__state = state
     def getState(self) -> int:
+        """Get the cell state"""
         return self.__state
-    def setState(self, state:int) -> None:
+    def setState(self, state: int) -> None:
+        """Set the cell state"""
         self.__state = state
 
 class Location:
@@ -30,60 +40,58 @@ class Location:
         self.y = y
 
 class Ant:
+    DEFAULT_STEP_SIZE = 1
     def __init__(self, location: Location):
         self.__location = location
         self.__face = 0
     def getLocation(self) -> Location:
         return self.__location
-    def __move(self, grid: list[list[Cell]]):
+    def __move(self, step: int, grid: list[list[Cell]]):
         # move
         if self.__face == 0:
-            self.__location.y+=1
+            self.__location.y += step
         elif self.__face == 1:
-            self.__location.x+=1
+            self.__location.x += step
         elif self.__face == 2:
-            self.__location.y-=1
+            self.__location.y -= step
         elif self.__face == 3:
-            self.__location.x-=1
+            self.__location.x -= step
         else:
-            raise Exception("Invalid face %i", self.__state)
+            raise Exception(f"Invalid face {self.__face}")
         # wrap
         if self.__location.x < 0:
-            self.__location.x = len(grid[0])
-        elif self.__location.x > len(grid[0]):
-            self.__location.x = 0
+            self.__location.x += len(grid[0])-1
+        elif self.__location.x > len(grid[0])-1:
+            self.__location.x -= len(grid[0])-1
         if self.__location.y < 0:
-            self.__location.y = len(grid)
-        elif self.__location.y > len(grid):
-            self.__location.y = 0
+            self.__location.y += len(grid)-1
+        elif self.__location.y > len(grid)-1:
+            self.__location.y -= len(grid)-1
     def moveLeft(self, grid:list[list[Cell]]):
+        """Turn the ant left and step forward"""
         # turn
         self.__face -= 1
         # wrap
         if self.__face < 0:
             self.__face = 3
         # move
-        self.__move(grid)
+        self.__move(self.DEFAULT_STEP_SIZE, grid)
     def moveRight(self, grid:list[list[Cell]]):
+        """Turn the ant right and step forward"""
         # turn
         self.__face += 1
         # wrap
         if self.__face > 3:
             self.__face = 0
         # move
-        self.__move(grid)
+        self.__move(self.DEFAULT_STEP_SIZE, grid)
 
+# init pygame
 pygame.init()
-
 pygame.display.set_caption("langton's ant ('p' to pause)")
-
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-
 clock = pygame.time.Clock()
-
 font = pygame.font.SysFont(None, 24)
-
-steps = 0
 
 # init grid
 grid = []
@@ -97,38 +105,46 @@ for y in range(0, GRID_HEIGHT):
 ants = []
 ants.append(Ant(Location(GRID_WIDTH//2, GRID_HEIGHT//2)))
 
+# init game
 paused = False
+steps = 0
+elapsed = 0
 
-def quit():
-    pygame.quit()
-    raise SystemExit
+screen.fill((0x00, 0x00, 0xff))
 
+# game loop
 while True:
+    elapsed = clock.tick()
+    fps = clock.get_fps()
+    num_steps = 1
+
     # handle events
+    quit_game = False
     for event in pygame.event.get():
         # quit game
         if event.type == pygame.QUIT:
-            quit()
+            quit_game = True
         # pause game
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_p:
                 paused = not paused
             elif event.key == pygame.K_ESCAPE:
-                quit()
+                quit_game = True
+    if quit_game is True:
+        pygame.quit()
+        raise SystemExit
 
-    screen.fill("black")
-
-    # naive approach, redraw all cells
+    # draw cells
     for y in range(0, GRID_HEIGHT):
         for x in range(0, GRID_WIDTH):
             # get state/colour
             state = grid[y][x].getState()
             if state == 0:
-                colour = (0xff, 0x00, 0x00)
+                colour = CELL_COLOURS[state]
             elif state == 1:
-                colour = (0xff, 0xff, 0xff)
+                colour = CELL_COLOURS[state]
             else:
-                raise Exception("Invalid state %i", state)
+                raise Exception(f"Invalid state {state}")
             # draw
             left = x * CELL_WIDTH
             top = y * CELL_HEIGHT
@@ -145,22 +161,26 @@ while True:
         top = location.y * CELL_HEIGHT
         pygame.draw.rect(screen, colour, (left, top, CELL_WIDTH, CELL_HEIGHT))
 
-        if paused == False:
+    # move all ants
+    if paused is False:
+        for i in range(0, num_steps):
             steps += 1
             # game logic
-            cell_state = grid[location.y][location.x].getState()
-            if cell_state == 0:
-                grid[location.y][location.x].setState(1)
-                ant.moveLeft(grid)
-            elif cell_state == 1:
-                grid[location.y][location.x].setState(0)
-                ant.moveRight(grid)
-            else:
-                raise Exception("Invalid state %i", state)
+            for ant in ants:
+                # get state, set state, move ant
+                cell_state = grid[location.y][location.x].getState()
+                if cell_state == 0:
+                    grid[location.y][location.x].setState(1)
+                    ant.moveLeft(grid)
+                elif cell_state == 1:
+                    grid[location.y][location.x].setState(0)
+                    ant.moveRight(grid)
+                else:
+                    raise Exception(f"Invalid state {state}")
 
     # draw text
-    text = font.render(f"Steps: {steps}", True, (0x00, 0x00, 0x00))
-    screen.blit(text, (0, 0))
+    text = f"Steps: {steps}\nFPS: {fps:.2f}\nElapsed: {elapsed}ms"
+    text_img = font.render(text, True, (0x00, 0x00, 0x00))
+    screen.blit(text_img, (0, 0))
 
     pygame.display.flip()
-    clock.tick(60)
