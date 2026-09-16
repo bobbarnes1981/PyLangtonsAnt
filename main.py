@@ -1,15 +1,18 @@
 """Langton's Ant in Python"""
 import pygame
+import random
 
 WIDTH = 800
 HEIGHT = 600
 
-CELL_SIZE = 10
+CELL_SIZE = 2
 CELL_WIDTH = CELL_SIZE
 CELL_HEIGHT = CELL_SIZE
 
 GRID_WIDTH = WIDTH//CELL_WIDTH
 GRID_HEIGHT = HEIGHT//CELL_HEIGHT
+
+NUM_ANTS = 10
 
 CELL_COLOURS = [
     (0xff, 0x00, 0x00),
@@ -60,13 +63,13 @@ class Ant:
             raise Exception(f"Invalid face {self.__face}")
         # wrap
         if self.__location.x < 0:
-            self.__location.x += len(grid[0])-1
+            self.__location.x += len(grid[0])
         elif self.__location.x > len(grid[0])-1:
-            self.__location.x -= len(grid[0])-1
+            self.__location.x -= len(grid[0])
         if self.__location.y < 0:
-            self.__location.y += len(grid)-1
+            self.__location.y += len(grid)
         elif self.__location.y > len(grid)-1:
-            self.__location.y -= len(grid)-1
+            self.__location.y -= len(grid)
     def moveLeft(self, grid:list[list[Cell]]):
         """Turn the ant left and step forward"""
         # turn
@@ -103,7 +106,10 @@ for y in range(0, GRID_HEIGHT):
 
 # init ants
 ants = []
-ants.append(Ant(Location(GRID_WIDTH//2, GRID_HEIGHT//2)))
+for a in range(0, NUM_ANTS):
+    x = random.randint(0, GRID_WIDTH-1)
+    y = random.randint(0, GRID_HEIGHT-1)
+    ants.append(Ant(Location(x, y)))
 
 # init game
 paused = False
@@ -167,6 +173,8 @@ while True:
             steps += 1
             # game logic
             for ant in ants:
+                # get location
+                location = ant.getLocation()
                 # get state, set state, move ant
                 cell_state = grid[location.y][location.x].getState()
                 if cell_state == 0:
