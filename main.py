@@ -2,17 +2,19 @@
 import pygame
 import random
 
+OPTIMISE_DRAW = True
+
 WIDTH = 800
 HEIGHT = 600
 
-CELL_SIZE = 2
+CELL_SIZE = 5
 CELL_WIDTH = CELL_SIZE
 CELL_HEIGHT = CELL_SIZE
 
 GRID_WIDTH = WIDTH//CELL_WIDTH
 GRID_HEIGHT = HEIGHT//CELL_HEIGHT
 
-NUM_ANTS = 10
+NUM_ANTS = 5
 
 CELL_COLOURS = [
     (0xff, 0x00, 0x00),
@@ -140,6 +142,9 @@ while True:
         pygame.quit()
         raise SystemExit
 
+    if OPTIMISE_DRAW is True:
+        screen.fill(CELL_COLOURS[0])
+
     # draw cells
     for y in range(0, GRID_HEIGHT):
         for x in range(0, GRID_WIDTH):
@@ -151,10 +156,11 @@ while True:
                 colour = CELL_COLOURS[state]
             else:
                 raise Exception(f"Invalid state {state}")
-            # draw
-            left = x * CELL_WIDTH
-            top = y * CELL_HEIGHT
-            pygame.draw.rect(screen, colour, (left, top, CELL_WIDTH, CELL_HEIGHT))
+            if OPTIMISE_DRAW is False or state != 0:
+                # draw
+                left = x * CELL_WIDTH
+                top = y * CELL_HEIGHT
+                pygame.draw.rect(screen, colour, (left, top, CELL_WIDTH, CELL_HEIGHT))
 
     # draw all ants
     for ant in ants:
